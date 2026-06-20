@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Deviens pompier de La Madeleine</title>
+
+<style>
+body{
+  font-family:Arial,sans-serif;
+  text-align:center;
+  background:#f4f4f4;
+  margin:0;
+  padding:15px;
+}
+
+h1{font-size:24px;}
+
+.zone{
+  position:relative;
+  width:100%;
+  max-width:390px;
+  aspect-ratio:9/16;
+  margin:auto;
+  overflow:hidden;
+  border-radius:16px;
+  background:black;
+}
+
+video{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  background:black;
+}
+
+#cadre{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  pointer-events:none;
+  z-index:2;
+}
+
+button,a{
+  display:inline-block;
+  margin:8px 4px;
+  padding:12px 18px;
+  border-radius:999px;
+  border:none;
+  background:#c62828;
+  color:white;
+  font-size:16px;
+  text-decoration:none;
+}
+
+#download{display:none;}
+canvas{display:none;}
+</style>
+</head>
+
+<body>
+
+<h1>Deviens pompier de La Madeleine</h1>
+<p>Place le visage dans le casque puis prends la photo.</p>
+
+<div class="zone">
+  <video id="video" autoplay playsinline></video>
+  <img id="cadre" src="cadre-pompier.png" alt="Cadre pompier">
+</div>
+
+<br>
+
+<button onclick="changerCamera()">🔄 Changer de caméra</button>
+<button onclick="prendrePhoto()">📸 Prendre la photo</button>
+
+<a id="download" download="jeune-pompier-la-madeleine.png">⬇️ Télécharger la photo</a>
+
+<canvas id="canvas" width="1080" height="1920"></canvas>
+
+<script>
+const video = document.getElementById("video");
+const canvas = document.getElementById("canvas");
+const cadre = document.getElementById("cadre");
+const download = document.getElementById("download");
+
+let cameraActuelle = "environment";
+let fluxVideo = null;
+
+async function demarrerCamera(){
+  if(fluxVideo){
+    fluxVideo.getTracks().forEach(track => track.stop());
+  }
+
+  try{
+    fluxVideo = await navigator.mediaDevices.getUserMedia({
+      video:{
+        facingMode:{ideal:cameraActuelle}
+      },
+      audio:false
+    });
+
+    video.srcObject = fluxVideo;
+  }catch(e){
+    alert("Impossible d'accéder à la caméra.");
+    console.error(e);
+  }
+}
+
+function changerCamera(){
+  cameraActuelle = cameraActuelle === "environment" ? "user" : "environment";
+  demarrerCamera();
+}
+
+function dessinerVideoCover(ctx, video, canvas){
+  const videoRatio = video.videoWidth / video.videoHeight;
+  const canvasRatio = canvas.width / canvas.height;
+
+  let sx, sy, sw, sh;
+
+  if(videoRatio > canvasRatio){
+    sh = video.videoHeight;
+    sw = sh * canvasRatio;
+    sx = (video.videoWidth - sw) / 2;
+    sy = 0;
+  }else{
+    sw = video.videoWidth;
+    sh = sw / canvasRatio;
+    sx = 0;
+    sy = (video.videoHeight - sh) / 2;
+  }
+
+  ctx.drawImage(video, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+}
+
+function prendrePhoto(){
+  const ctx = canvas.getContext("2d");
+
+  dessinerVideoCover(ctx, video, canvas);
+
+  const imageCadre = new Image();
+  imageCadre.src = cadre.src;
+
+  imageCadre.onload = function(){
+    ctx.drawImage(imageCadre, 0, 0, canvas.width, canvas.height);
+    download.href = canvas.toDataURL("image/png");
+    download.style.display = "inline-block";
+  };
+}
+
+demarrerCamera();
+</script>
+
+</body>
+</html>
